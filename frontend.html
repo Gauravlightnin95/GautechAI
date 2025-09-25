@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cattle Breed Scanner</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        background: linear-gradient(to bottom right, #e0f2f7, #c1e1e9, #a3d0da);
+        font-family: 'Inter', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+        position: relative;
+      }
+      .bg-cattle-decoration { position: fixed; opacity: 0.1; filter: blur(2px); z-index: 0; pointer-events: none; mix-blend-mode: multiply; }
+      .bg-cattle-1 { top: 5%; left: 10%; width: 200px; transform: rotate(-15deg); }
+      .bg-cattle-2 { bottom: 10%; right: 5%; width: 250px; transform: rotate(20deg); }
+      .bg-cattle-3 { top: 50%; left: -50px; width: 180px; transform: translateY(-50%) rotate(5deg); }
+      .bg-cattle-4 { bottom: -30px; left: 20%; width: 300px; transform: rotate(-10deg); }
+      .bg-cattle-5 { top: -20px; right: 20%; width: 220px; transform: rotate(25deg); }
+      .app-container { position: relative; z-index: 10; background-color: rgba(255, 255, 255, 0.95); border-radius: 3rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+      .scanner-container { position: relative; width: 100%; max-width: 400px; aspect-ratio: 1/1; overflow: hidden; border-radius: 1.5rem; }
+      .camera-feed, .image-preview-container { width: 100%; height: 100%; object-fit: cover; }
+      .shutter-button-ring { border: 4px solid rgba(25, 118, 210, 0.5); }
+      .language-modal, .about-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 10000; }
+      .scan-flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.8); opacity: 0; transition: opacity 0.2s ease-out; pointer-events: none; z-index: 20; }
+      .language-modal-content { background: white; padding: 2rem; border-radius: 1rem; text-align: center; }
+      .language-modal-content button { margin: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 9999px; color: white; font-weight: 600; transition: background-color 0.2s; }
+      .about-modal-content { background: white; padding: 1.5rem 2rem; border-radius: 1rem; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; position: relative; }
+      .about-modal-content h2 { font-size: 1.5rem; font-weight: 700; color: #1e3a8a; margin-bottom: 1rem; border-bottom: 2px solid #dbeafe; padding-bottom: 0.5rem; }
+      .about-modal-content h3 { font-size: 1.1rem; font-weight: 600; color: #1e40af; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+      .about-modal-content p { color: #4b5563; line-height: 1.6; margin-bottom: 1rem; }
+      .about-modal-content ul { list-style-type: none; padding-left: 0; }
+      .about-modal-content li { color: #4b5563; margin-bottom: 0.5rem; display: flex; align-items: flex-start; }
+      .about-modal-content li::before { content: '✓'; color: #2563eb; font-weight: bold; margin-right: 0.75rem; margin-top: 0.1rem; }
+      
+      #tutorial-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none; }
+      #tutorial-overlay { position: absolute; width: 100%; height: 100%; background: transparent; pointer-events: auto; }
+      #tutorial-spotlight { position: absolute; border-radius: 1rem; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); transition: all 0.5s ease-in-out; }
+      #tutorial-bubble { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; color: #1e3a8a; padding: 1rem; border-radius: 0.75rem; width: 220px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 10001; pointer-events: auto; transition: opacity 0.3s ease-in-out; }
+      #tutorial-arrow { position: fixed; height: 30px; fill: #ffffff; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); z-index: 10000; transform-origin: 0% 50%; transition: all 0.5s ease-in-out; }
+      #tutorial-text { font-size: 0.9rem; font-weight: 500; margin: 0; }
+      #skip-tutorial-btn { background: #dbeafe; color: #1e40af; border: none; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; margin-top: 0.75rem; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    
+    <img src="https://i.imgur.com/kP12J2k.png" class="bg-cattle-decoration bg-cattle-1" alt="Decorative Cattle Image">
+    <img src="https://i.imgur.com/gK92J1U.png" class="bg-cattle-decoration bg-cattle-2" alt="Decorative Cattle Image">
+    <img src="https://i.imgur.com/nP31K3a.png" class="bg-cattle-decoration bg-cattle-3" alt="Decorative Cattle Image">
+    <img src="https://i.imgur.com/sQ02W1x.png" class="bg-cattle-decoration bg-cattle-4" alt="Decorative Cattle Image">
+    <img src="https://i.imgur.com/wA01Y2m.png" class="bg-cattle-decoration bg-cattle-5" alt="Decorative Cattle Image">
+
+    <div class="app-container flex flex-col items-center justify-center p-4 w-full max-w-sm mx-auto">
+      <div class="w-full flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold text-blue-700" data-i18n="appTitle">Cattle App</h1>
+        <div class="flex space-x-3 items-center">
+          <button id="about-btn" class="text-blue-500 hover:text-blue-700 transition-colors duration-200" aria-label="About this App"><i class="fas fa-info-circle text-2xl"></i></button>
+          <button id="language-btn" class="text-blue-500 hover:text-blue-700 transition-colors duration-200" aria-label="Change Language"><i class="fas fa-language text-2xl"></i></button>
+          <button id="tutorial-btn" class="text-blue-500 hover:text-blue-700 transition-colors duration-200" aria-label="Open Tutorial"><i class="fas fa-question-circle text-2xl"></i></button>
+        </div>
+      </div>
+      <div class="relative w-full">
+        <div class="scanner-container">
+          <video id="camera-feed" class="camera-feed" autoplay playsinline></video>
+          <div id="image-preview-container" class="image-preview-container flex items-center justify-center bg-gray-200" style="display: none;"></div>
+          <div id="scan-flash" class="scan-flash"></div>
+        </div>
+        <div class="absolute inset-x-0 bottom-4 flex justify-center items-end p-2 z-10">
+          <label id="upload-btn" for="file-upload" class="mr-6 cursor-pointer text-white bg-orange-500 rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-orange-600 transition-colors duration-200">
+            <i class="fas fa-image text-xl"></i>
+          </label>
+          <input id="file-upload" type="file" accept="image/*" class="hidden">
+          <button id="shutter-btn" class="shutter-button-ring rounded-full w-16 h-16 flex items-center justify-center p-1 bg-blue-600 hover:bg-blue-700 transition-colors duration-200" aria-label="Take Picture">
+            <div class="bg-white rounded-full w-12 h-12"></div>
+          </button>
+        </div>
+      </div>
+      <div id="loading-indicator" class="mt-4 hidden flex-col items-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
+        <p class="mt-2 text-blue-600" data-i18n="analyzing">Analyzing...</p>
+      </div>
+      <div id="results" class="mt-4 p-4 bg-blue-100 rounded-lg w-full text-center hidden">
+        <p id="breed-name" class="text-lg font-semibold text-blue-900"></p>
+        <p id="confidence-score" class="text-sm text-blue-600"></p>
+      </div>
+    </div>
+    
+    <div id="language-modal" class="language-modal">
+        <div class="language-modal-content">
+            <h2 class="text-xl font-bold mb-4" data-i18n="selectLanguage">Select a Language</h2>
+            <button class="bg-blue-500 hover:bg-blue-600" onclick="setLanguage('en')">English</button>
+            <button class="bg-blue-500 hover:bg-blue-600" onclick="setLanguage('hi')">हिन्दी</button>
+            <button class="bg-blue-500 hover:bg-blue-600" onclick="setLanguage('bn')">বাংলা</button>
+            <button class="bg-blue-500 hover:bg-blue-600" onclick="setLanguage('mr')">मराठी</button>
+            <button class="bg-blue-500 hover:bg-blue-600" onclick="setLanguage('ta')">தமிழ்</button>
+            <button class="bg-blue-500 hover:bg-blue-600" onclick="setLanguage('te')">తెలుగు</button>
+        </div>
+    </div>
+    
+    <div id="about-modal" class="about-modal">
+      <div class="about-modal-content">
+        <button id="close-about-btn" class="absolute top-2 right-3 text-2xl text-gray-500 hover:text-gray-800">&times;</button>
+        <h2>About the AI-Powered Cattle Breed Classifier</h2>
+        <p>The <strong>Cattle Breed Classifier</strong> is a modern, responsive web application designed to identify the breed of cattle from a digital image. Built with a mobile-first approach, this tool empowers farmers, veterinarians, and agricultural professionals by providing a quick and accessible method for breed identification directly from a smartphone's camera or photo gallery.</p>
+        <h3>Technology Stack</h3>
+        <p><strong>Frontend:</strong> HTML5, TailwindCSS, JavaScript (ES6+)</p>
+        <p><strong>Backend:</strong> Python 3 & Flask, designed for a TensorFlow/PyTorch classification model.</p>
+      </div>
+    </div>
+    
+    <div id="tutorial-container" class="hidden">
+      <div id="tutorial-overlay"></div>
+      <div id="tutorial-spotlight"></div>
+      <div id="tutorial-bubble">
+        <p id="tutorial-text"></p>
+        <button id="skip-tutorial-btn">Skip</button>
+      </div>
+      <svg id="tutorial-arrow"  preserveAspectRatio="none">
+        <path d="M0,1 L85,1 L85,0 L100,1.5 L85,3 L85,2 L0,2 Z" />
+      </svg>
+    </div>
+    
+    <canvas id="camera-canvas" class="hidden"></canvas>
+
+    <script>
+      const cameraFeed = document.getElementById('camera-feed');
+      const imagePreviewContainer = document.getElementById('image-preview-container');
+      const shutterBtn = document.getElementById('shutter-btn');
+      const fileUpload = document.getElementById('file-upload');
+      const loadingIndicator = document.getElementById('loading-indicator');
+      const resultsDiv = document.getElementById('results');
+      const breedName = document.getElementById('breed-name');
+      const confidenceScore = document.getElementById('confidence-score');
+      const cameraCanvas = document.getElementById('camera-canvas');
+      const scanFlash = document.getElementById('scan-flash');
+      const tutorialBtn = document.getElementById('tutorial-btn');
+      const languageBtn = document.getElementById('language-btn');
+      const languageModal = document.getElementById('language-modal');
+      const aboutBtn = document.getElementById('about-btn');
+      const aboutModal = document.getElementById('about-modal');
+      const closeAboutBtn = document.getElementById('close-about-btn');
+      const tutorialContainer = document.getElementById('tutorial-container');
+      const tutorialOverlay = document.getElementById('tutorial-overlay');
+      const tutorialSpotlight = document.getElementById('tutorial-spotlight');
+      const tutorialBubble = document.getElementById('tutorial-bubble');
+      const tutorialArrow = document.getElementById('tutorial-arrow');
+      const tutorialText = document.getElementById('tutorial-text');
+      const skipTutorialBtn = document.getElementById('skip-tutorial-btn');
+
+      let currentStream = null;
+      let tutorialTimeout = null;
+      let currentTutorialStep = 0;
+
+      const translations = {
+        'en': {
+          appTitle: 'Cattle App', preview: 'Preview', analyzing: 'Analyzing...',
+          tutorialStep1: 'This is the live camera view. Position the cattle in the frame.',
+          tutorialStep2: 'Press here to scan the cattle.',
+          tutorialStep3: 'Or, upload an image from your gallery.',
+          tutorialStep4: 'The identified breed will appear down here.',
+          tutorialStep5: 'Change the language any time.',
+          next: 'Next', gotIt: 'Got it!', selectLanguage: 'Select a Language', error: 'Error: Could not classify image.', tryAgain: 'Please try again.'
+        },
+        'hi': {
+          appTitle: 'मवेशी ऐप', preview: 'पूर्वावलोकन', analyzing: 'विश्लेषण हो रहा है...',
+          tutorialStep1: 'यह लाइव कैमरा व्यू है। मवेशी को फ्रेम में रखें।',
+          tutorialStep2: 'मवेशी को स्कैन करने के लिए यहां दबाएं।',
+          tutorialStep3: 'या, अपनी गैलरी से एक छवि अपलोड करें।',
+          tutorialStep4: 'पहचानी गई नस्ल यहां नीचे दिखाई देगी।',
+          tutorialStep5: 'किसी भी समय भाषा बदलें।',
+          next: 'अगला', gotIt: 'समझ गया!', selectLanguage: 'भाषा चुनें', error: 'त्रुटि: छवि को वर्गीकृत नहीं किया जा सका।', tryAgain: 'कृपया पुन: प्रयास करें।'
+        },
+        // Other languages omitted for brevity
+      };
+      
+      const tutorialSteps = [
+        { selector: '.scanner-container', textKey: 'tutorialStep1' },
+        { selector: '#shutter-btn', textKey: 'tutorialStep2' },
+        { selector: '#upload-btn', textKey: 'tutorialStep3' },
+        { selector: '#results', textKey: 'tutorialStep4', preAction: () => resultsDiv.style.display = 'block' },
+        { selector: '#language-btn', textKey: 'tutorialStep5' },
+      ];
+      
+      const setLanguage = (lang) => {
+        localStorage.setItem('language', lang);
+        document.querySelectorAll('[data-i18n]').forEach(element => {
+          const key = element.getAttribute('data-i18n');
+          const currentLangData = translations[lang] || translations['en'];
+          if (currentLangData && currentLangData[key]) {
+            element.textContent = currentLangData[key];
+          }
+        });
+        languageModal.style.display = 'none';
+      };
+
+      const startCamera = async () => {
+        try {
+          if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+          }
+          currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+          cameraFeed.srcObject = currentStream;
+          cameraFeed.style.display = 'block';
+          imagePreviewContainer.style.display = 'none';
+        } catch (err) {
+          console.error("Error accessing camera: ", err);
+          alert("Could not access the camera. Please ensure you have granted permission.");
+        }
+      };
+
+      const stopCamera = () => {
+        if (currentStream) {
+          currentStream.getTracks().forEach(track => track.stop());
+          cameraFeed.style.display = 'none';
+        }
+      };
+
+      const processImage = async (file) => {
+        loadingIndicator.style.display = 'flex';
+        resultsDiv.style.display = 'none';
+        const formData = new FormData();
+        formData.append('image', file);
+        const apiEndpoint = 'http://127.0.0.1:5000/classify';
+
+        try {
+          const response = await fetch(apiEndpoint, { method: 'POST', body: formData });
+          if (!response.ok) throw new Error(HTTP error! Status: ${response.status});
+          const result = await response.json();
+          loadingIndicator.style.display = 'none';
+          resultsDiv.style.display = 'block';
+          const topPrediction = result.predictions[0];
+          breedName.textContent = topPrediction.breed;
+          confidenceScore.textContent = Confidence: ${(topPrediction.confidence * 100).toFixed(2)}%;
+        } catch (error) {
+          console.error('Error during image classification:', error);
+          loadingIndicator.style.display = 'none';
+          resultsDiv.style.display = 'block';
+          const currentLang = localStorage.getItem('language') || 'en';
+          breedName.textContent = translations[currentLang].error;
+          confidenceScore.textContent = translations[currentLang].tryAgain;
+        }
+      };
+
+      const startTutorial = () => {
+        currentTutorialStep = 0;
+        tutorialContainer.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        showNextTutorialStep();
+      };
+
+      const stopTutorial = () => {
+        clearTimeout(tutorialTimeout);
+        tutorialContainer.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        if (resultsDiv.style.display === 'block' && !resultsDiv.querySelector('#breed-name').textContent) {
+            resultsDiv.style.display = 'none';
+        }
+      };
+
+      const showNextTutorialStep = () => {
+        if (currentTutorialStep >= tutorialSteps.length) {
+          stopTutorial();
+          return;
+        }
+        
+        tutorialBubble.style.opacity = 0;
+
+        setTimeout(() => {
+            const step = tutorialSteps[currentTutorialStep];
+            if (step.preAction) step.preAction();
+            const targetElement = document.querySelector(step.selector);
+            if (!targetElement) { stopTutorial(); return; }
+            const targetRect = targetElement.getBoundingClientRect();
+            
+            const spotlightPadding = 10;
+            tutorialSpotlight.style.width = ${targetRect.width + spotlightPadding}px;
+            tutorialSpotlight.style.height = ${targetRect.height + spotlightPadding}px;
+            tutorialSpotlight.style.top = ${targetRect.top - (spotlightPadding / 2)}px;
+            tutorialSpotlight.style.left = ${targetRect.left - (spotlightPadding / 2)}px;
+            tutorialSpotlight.style.borderRadius = window.getComputedStyle(targetElement).borderRadius;
+
+            const currentLang = localStorage.getItem('language') || 'en';
+            tutorialText.textContent = translations[currentLang][step.textKey];
+            tutorialBubble.style.opacity = 1;
+
+            const bubbleRect = tutorialBubble.getBoundingClientRect();
+            const bubbleCenter = { x: bubbleRect.left + bubbleRect.width / 2, y: bubbleRect.top + bubbleRect.height / 2 };
+            const targetCenter = { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 };
+            
+            const dx = targetCenter.x - bubbleCenter.x;
+            const dy = targetCenter.y - bubbleCenter.y;
+            const angle = Math.atan2(dy, dx);
+            const distance = Math.sqrt(dx*dx + dy*dy) - (bubbleRect.width / 2) - 15;
+
+            tutorialArrow.style.width = ${distance}px;
+            tutorialArrow.style.top = ${bubbleCenter.y - tutorialArrow.offsetHeight / 2}px;
+            tutorialArrow.style.left = ${bubbleCenter.x}px;
+            tutorialArrow.style.transform = rotate(${angle}rad);
+
+            currentTutorialStep++;
+            clearTimeout(tutorialTimeout);
+            tutorialTimeout = setTimeout(showNextTutorialStep, 3000);
+        }, 300);
+      };
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const savedLanguage = localStorage.getItem('language') || 'en';
+        setLanguage(savedLanguage);
+        startCamera();
+        
+        // This is the "always-on scanner" functionality
+        shutterBtn.addEventListener('click', () => {
+          if (currentStream && cameraFeed.readyState >= 3) {
+            scanFlash.style.opacity = 1;
+            setTimeout(() => { scanFlash.style.opacity = 0; }, 200);
+            const context = cameraCanvas.getContext('2d');
+            cameraCanvas.width = cameraFeed.videoWidth;
+            cameraCanvas.height = cameraFeed.videoHeight;
+            context.drawImage(cameraFeed, 0, 0, cameraCanvas.width, cameraFeed.videoHeight);
+            cameraCanvas.toBlob(processImage, 'image/jpeg');
+          }
+        });
+
+        fileUpload.addEventListener('change', (e) => {
+          stopCamera();
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              imagePreviewContainer.innerHTML = <img src="${event.target.result}" class="w-full h-full object-cover">;
+              imagePreviewContainer.style.display = 'block';
+              cameraFeed.style.display = 'none';
+              processImage(file);
+            };
+            reader.readAsDataURL(file);
+          } else {
+            startCamera();
+          }
+        });
+
+        tutorialBtn.addEventListener('click', startTutorial);
+        skipTutorialBtn.addEventListener('click', stopTutorial);
+        tutorialOverlay.addEventListener('click', stopTutorial);
+        languageBtn.addEventListener('click', () => languageModal.style.display = 'flex');
+        aboutBtn.addEventListener('click', () => aboutModal.style.display = 'flex');
+        closeAboutBtn.addEventListener('click', () => aboutModal.style.display = 'none');
+        window.addEventListener('click', (event) => {
+            if (event.target === languageModal) languageModal.style.display = 'none';
+            if (event.target === aboutModal) aboutModal.style.display = 'none';
+        });
+        window.addEventListener('resize', stopTutorial);
+      });
+    </script>
+  </body>
+</html>
